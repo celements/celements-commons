@@ -7,7 +7,7 @@ import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 /**
- * This helper simplifies the usage of checked exceptions with lambdas. It sneakily throws the 
+ * This helper simplifies the usage of checked exceptions with lambdas. It sneakily throws the
  * checked exception, but still enforces catching for callers of the rethrow methods.
  * Based on https://stackoverflow.com/a/27644392
  */
@@ -16,6 +16,11 @@ public final class LambdaExceptionUtil {
   @FunctionalInterface
   public interface ThrowingFunction<T, R, E extends Exception> {
     R apply(T t) throws E;
+  }
+
+  public static <T, R, E extends Exception> Function<T, R> rethrow(
+      ThrowingFunction<T, R, E> function) throws E {
+    return rethrowFunction(function);
   }
 
   public static <T, R, E extends Exception> Function<T, R> rethrowFunction(
@@ -35,6 +40,11 @@ public final class LambdaExceptionUtil {
     boolean test(T t) throws E;
   }
 
+  public static <T, E extends Exception> Predicate<T> rethrow(
+      ThrowingPredicate<T, E> predicate) throws E {
+    return rethrowPredicate(predicate);
+  }
+
   public static <T, E extends Exception> Predicate<T> rethrowPredicate(
       ThrowingPredicate<T, E> predicate) throws E {
     return t -> {
@@ -50,6 +60,11 @@ public final class LambdaExceptionUtil {
   @FunctionalInterface
   public interface ThrowingConsumer<T, E extends Exception> {
     void accept(T t) throws E;
+  }
+
+  public static <T, E extends Exception> Consumer<T> rethrow(
+      ThrowingConsumer<T, E> consumer) throws E {
+    return rethrowConsumer(consumer);
   }
 
   public static <T, E extends Exception> Consumer<T> rethrowConsumer(
@@ -68,6 +83,11 @@ public final class LambdaExceptionUtil {
     void accept(T t, U u) throws E;
   }
 
+  public static <T, U, E extends Exception> BiConsumer<T, U> rethrow(
+      ThrowingBiConsumer<T, U, E> biConsumer) throws E {
+    return rethrowBiConsumer(biConsumer);
+  }
+
   public static <T, U, E extends Exception> BiConsumer<T, U> rethrowBiConsumer(
       ThrowingBiConsumer<T, U, E> biConsumer) throws E {
     return (t, u) -> {
@@ -82,6 +102,11 @@ public final class LambdaExceptionUtil {
   @FunctionalInterface
   public interface ThrowingSupplier<T, E extends Exception> {
     T get() throws E;
+  }
+
+  public static <T, E extends Exception> Supplier<T> rethrow(
+      ThrowingSupplier<T, E> supplier) throws E {
+    return rethrowSupplier(supplier);
   }
 
   public static <T, E extends Exception> Supplier<T> rethrowSupplier(
@@ -101,7 +126,12 @@ public final class LambdaExceptionUtil {
     void run() throws E;
   }
 
-  public static <T, E extends Exception> Runnable rethrowRunnable(
+  public static <E extends Exception> Runnable rethrow(
+      ThrowingRunnable<E> runnable) throws E {
+    return rethrowRunnable(runnable);
+  }
+
+  public static <E extends Exception> Runnable rethrowRunnable(
       ThrowingRunnable<E> runnable) throws E {
     return () -> {
       try {
