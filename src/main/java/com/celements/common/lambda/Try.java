@@ -23,8 +23,8 @@ import com.celements.common.lambda.LambdaExceptionUtil.ThrowingSupplier;
  *
  * Example usage:
  * String text = Try.to(() -> readSomeFileText())
- * .orElseTry(e -> loadDatabaseText())
- * .recover(() -> defaultText())
+ * .orElseTry(() -> loadDatabaseText())
+ * .recover(exc -> exc.getMessage())
  */
 @Immutable
 public interface Try<T, E extends Exception> {
@@ -82,12 +82,6 @@ public interface Try<T, E extends Exception> {
   @NotNull
   <R> Try<R, E> flatMapTry(@NotNull ThrowingFunction<T, Try<R, E>, E> function);
 
-  @Nullable
-  T recover(@NotNull Function<E, T> function);
-
-  @NotNull
-  <F extends Exception> Try<T, F> recoverTry(@NotNull ThrowingFunction<E, T, F> function);
-
   @NotNull
   Try<T, E> orElse(@Nullable T value);
 
@@ -95,7 +89,10 @@ public interface Try<T, E extends Exception> {
   Try<T, E> orElseGet(@NotNull Supplier<T> supplier);
 
   @NotNull
-  Try<T, E> orElseTry(@NotNull ThrowingSupplier<T, E> supplier);
+  <F extends Exception> Try<T, F> orElseTry(@NotNull ThrowingSupplier<T, F> supplier);
+
+  @Nullable
+  T recover(@NotNull Function<E, T> function);
 
 }
 
@@ -153,16 +150,6 @@ class TrySuccess<T, E extends Exception> implements Try<T, E> {
   }
 
   @Override
-  public T recover(Function<E, T> function) {
-    return value;
-  }
-
-  @Override
-  public <F extends Exception> Try<T, F> recoverTry(ThrowingFunction<E, T, F> function) {
-    return castThis();
-  }
-
-  @Override
   public Try<T, E> orElse(T value) {
     return this;
   }
@@ -173,8 +160,13 @@ class TrySuccess<T, E extends Exception> implements Try<T, E> {
   }
 
   @Override
-  public Try<T, E> orElseTry(ThrowingSupplier<T, E> supplier) {
-    return this;
+  public <F extends Exception> Try<T, F> orElseTry(ThrowingSupplier<T, F> supplier) {
+    return castThis();
+  }
+
+  @Override
+  public T recover(Function<E, T> function) {
+    return value;
   }
 
   @Override
@@ -250,16 +242,6 @@ class TryFailure<T, E extends Exception> implements Try<T, E> {
   }
 
   @Override
-  public T recover(Function<E, T> function) {
-    return function.apply(exception);
-  }
-
-  @Override
-  public <F extends Exception> Try<T, F> recoverTry(ThrowingFunction<E, T, F> function) {
-    return Try.to(() -> function.apply(exception));
-  }
-
-  @Override
   public Try<T, E> orElse(T value) {
     return Try.success(value);
   }
@@ -270,8 +252,13 @@ class TryFailure<T, E extends Exception> implements Try<T, E> {
   }
 
   @Override
-  public Try<T, E> orElseTry(ThrowingSupplier<T, E> supplier) {
+  public <F extends Exception> Try<T, F> orElseTry(ThrowingSupplier<T, F> supplier) {
     return Try.to(supplier);
+  }
+
+  @Override
+  public T recover(Function<E, T> function) {
+    return function.apply(exception);
   }
 
   @Override
