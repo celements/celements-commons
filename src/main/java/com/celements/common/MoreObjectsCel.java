@@ -1,17 +1,22 @@
 package com.celements.common;
 
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Properties;
 import java.util.Queue;
 import java.util.Set;
+import java.util.Spliterator;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 import javax.annotation.Nullable;
 import javax.validation.constraints.NotNull;
@@ -20,6 +25,7 @@ import com.google.common.base.Defaults;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Streams;
 import com.google.common.primitives.Primitives;
 
 public final class MoreObjectsCel {
@@ -47,6 +53,20 @@ public final class MoreObjectsCel {
     return candidate -> targetClass.isInstance(candidate)
         ? Stream.of(targetClass.cast(candidate))
         : Stream.empty();
+  }
+
+  /**
+   * When the returned {@code Function} is passed as an argument to {@link Optional#flatMap}, the
+   * result is an optional of {@code targetClass}.
+   *
+   * <pre>
+   *   Optional<SourceType> optSource = ...
+   *   Optional<TargetType> optTarget = optSource.flatMap(tryCastOpt(TargetType.class))
+   * </pre>
+   */
+  @NotNull
+  public static <F, T> Function<F, Optional<T>> tryCastOpt(@NotNull Class<T> targetClass) {
+    return candidate -> MoreObjectsCel.tryCast(candidate, targetClass);
   }
 
   /**
@@ -83,7 +103,7 @@ public final class MoreObjectsCel {
    * non-nullable types, see {@link #defaultValueNonNullable(Class)}
    */
   @Nullable
-  public static <T> T defaultValue(@NotNull Class<T> type) {
+  public static <T> T defaultValue(@Nullable Class<T> type) {
     return defaultValue(type, false);
   }
 
@@ -92,17 +112,16 @@ public final class MoreObjectsCel {
    * non-nullable types, see {@link #defaultMutableValueNonNullable(Class)}
    */
   @Nullable
-  public static <T> T defaultMutableValue(@NotNull Class<T> type) {
+  public static <T> T defaultMutableValue(@Nullable Class<T> type) {
     return defaultValue(type, true);
   }
 
-  @SuppressWarnings("unchecked")
   private static <T> T defaultValue(Class<T> type, boolean mutable) {
-    T value = Defaults.defaultValue(Primitives.unwrap(type));
+    T value = (type != null) ? Defaults.defaultValue(Primitives.unwrap(type)) : null;
     if (value != null) {
       return value;
     } else if (String.class.equals(type)) {
-      return (T) "";
+      return type.cast("");
     } else {
       return defaultValueNonNullable(type, mutable);
     }
@@ -113,7 +132,7 @@ public final class MoreObjectsCel {
    *         List, Set, Queue, Iterable, Map, Stream, Optional
    */
   @Nullable
-  public static <T> T defaultValueNonNullable(@NotNull Class<T> type) {
+  public static <T> T defaultValueNonNullable(@Nullable Class<T> type) {
     return defaultValueNonNullable(type, false);
   }
 
@@ -122,31 +141,73 @@ public final class MoreObjectsCel {
    *         List, Set, Queue, Iterable, Map, Stream, Optional
    */
   @Nullable
-  public static <T> T defaultMutableValueNonNullable(@NotNull Class<T> type) {
+  public static <T> T defaultMutableValueNonNullable(@Nullable Class<T> type) {
     return defaultValueNonNullable(type, true);
   }
 
-  @SuppressWarnings("unchecked")
   private static <T> T defaultValueNonNullable(Class<T> type, boolean mutable) {
-    if (List.class.isAssignableFrom(type)) {
-      return (T) (mutable ? new ArrayList<>() : ImmutableList.of());
-    } else if (Set.class.isAssignableFrom(type)) {
-      return (T) (mutable ? new LinkedHashSet<>() : ImmutableSet.of());
-    } else if (Queue.class.isAssignableFrom(type)) {
-      return (T) new LinkedList<>();
-    } else if (Iterable.class.isAssignableFrom(type)) {
-      return (T) defaultValue(List.class, mutable);
-    } else if (Map.class.isAssignableFrom(type)) {
-      return (T) (mutable ? new LinkedHashMap<>() : ImmutableMap.of());
-    } else if (Stream.class.isAssignableFrom(type)) {
-      return (T) Stream.empty();
-    } else if (Optional.class.isAssignableFrom(type)) {
-      return (T) Optional.empty();
-    } else if (com.google.common.base.Optional.class.isAssignableFrom(type)) {
-      return (T) com.google.common.base.Optional.absent();
-    } else {
+    if (type == null) {
       return null;
     }
+    Object ret = null;
+    if (List.class.isAssignableFrom(type)) {
+      ret = (mutable ? new ArrayList<>() : ImmutableList.of());
+    } else if (Set.class.isAssignableFrom(type)) {
+      ret = (mutable ? new LinkedHashSet<>() : ImmutableSet.of());
+    } else if (Queue.class.isAssignableFrom(type)) {
+      ret = new LinkedList<>();
+    } else if (Iterable.class.isAssignableFrom(type)) {
+      ret = defaultValue(List.class, mutable);
+    } else if (Properties.class.isAssignableFrom(type)) {
+      ret = new Properties();
+    } else if (Map.class.isAssignableFrom(type)) {
+      ret = (mutable ? new LinkedHashMap<>() : ImmutableMap.of());
+    } else if (Stream.class.isAssignableFrom(type)) {
+      ret = Stream.empty();
+    } else if (Optional.class.isAssignableFrom(type)) {
+      ret = Optional.empty();
+    } else if (com.google.common.base.Optional.class.isAssignableFrom(type)) {
+      ret = com.google.common.base.Optional.absent();
+    }
+    return type.cast(ret);
+  }
+
+  @SuppressWarnings("unchecked")
+  public static <T> Stream<T> stream(Object value) {
+    if (value instanceof Stream) {
+      return (Stream<T>) value;
+    } else if (value instanceof Collection) {
+      return ((Collection<T>) value).stream();
+    } else if (value instanceof Spliterator) {
+      return StreamSupport.stream((Spliterator<T>) value, false);
+    } else if (value instanceof Iterable) {
+      return Streams.stream((Iterable<T>) value);
+    } else if (value instanceof Iterator) {
+      return Streams.stream((Iterator<T>) value);
+    } else if (value instanceof Optional) {
+      return MoreOptional.stream((Optional<T>) value);
+    } else if (value instanceof com.google.common.base.Optional) {
+      return MoreOptional.stream(((com.google.common.base.Optional<T>) value).toJavaUtil());
+    } else if (value != null) {
+      return Stream.of((T) value);
+    } else {
+      return Stream.empty();
+    }
+  }
+
+  private static final List<Class<?>> UTIL_CLASSES = ImmutableList.of(Stream.class,
+      List.class, Set.class, Queue.class, Collection.class, Iterable.class,
+      Properties.class, Map.class,
+      Spliterator.class, Iterator.class);
+
+  @SuppressWarnings("unchecked")
+  public static <T> Stream<Class<T>> findAssignableUtilClasses(Object value) {
+    if (value == null) {
+      return Stream.empty();
+    }
+    return UTIL_CLASSES.stream()
+        .filter(c -> c.isInstance(value))
+        .map(c -> (Class<T>) c);
   }
 
 }

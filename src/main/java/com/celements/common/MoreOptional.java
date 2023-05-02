@@ -2,11 +2,14 @@ package com.celements.common;
 
 import java.util.Optional;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 
 import javax.annotation.Nullable;
 import javax.validation.constraints.NotNull;
+
+import com.google.common.base.Predicates;
 
 public final class MoreOptional {
 
@@ -25,6 +28,11 @@ public final class MoreOptional {
   @NotNull
   public static <T> Stream<T> stream(@NotNull Optional<T> opt) {
     return opt.isPresent() ? Stream.of(opt.get()) : Stream.empty();
+  }
+
+  @NotNull
+  public <T, R> Function<T, Stream<R>> stream(@NotNull Function<T, Optional<R>> func) {
+    return func.andThen(MoreOptional::stream);
   }
 
   /**
@@ -50,8 +58,15 @@ public final class MoreOptional {
    */
   @NotNull
   public static <T> Optional<T> findFirstPresent(@NotNull Stream<Supplier<Optional<T>>> suppliers) {
+    return findFirstPresent(suppliers, Predicates.alwaysTrue());
+  }
+
+  @NotNull
+  public static <T> Optional<T> findFirstPresent(@NotNull Stream<Supplier<Optional<T>>> suppliers,
+      Predicate<T> filter) {
     return suppliers.map(Supplier::get)
         .flatMap(MoreOptional::stream)
+        .filter(filter)
         .findFirst();
   }
 

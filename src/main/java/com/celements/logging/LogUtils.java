@@ -270,7 +270,7 @@ public final class LogUtils {
   }
 
   public static <T> Supplier<String> format(final T msg, final Object... args) {
-    return defer(() -> MessageFormatter.arrayFormat(Objects.toString(msg), args));
+    return defer(() -> MessageFormatter.arrayFormat(Objects.toString(msg), args).getMessage());
   }
 
 }
