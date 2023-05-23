@@ -57,4 +57,20 @@ public final class MoreRange {
         range.hasUpperBound() ? range.upperBoundType() : null);
   }
 
+  @NotNull
+  public static <T extends Comparable<?>> Range<T> withoutLowerBound(
+      @NotNull Range<? extends T> range) {
+    return range.hasUpperBound()
+        ? Range.upTo(range.upperEndpoint(), range.upperBoundType())
+        : Range.all();
+  }
+
+  @NotNull
+  public static <T extends Comparable<?>> Range<T> withoutUpperBound(
+      @NotNull Range<? extends T> range) {
+    return range.hasLowerBound()
+        ? Range.downTo(range.lowerEndpoint(), range.lowerBoundType())
+        : Range.all();
+  }
+
 }
