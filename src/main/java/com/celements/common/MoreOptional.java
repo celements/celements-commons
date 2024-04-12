@@ -23,16 +23,17 @@ public final class MoreOptional {
    *   Stream<T> stream = streamOfOpts.flatMap(MoreOptional::stream)
    * </pre>
    *
-   * Can be replaced with {@link Optional#stream()} from Java 9+.
+   * @deprecated instead use {@link Optional#stream()}
    */
+  @Deprecated(since = "6.0", forRemoval = true)
   @NotNull
   public static <T> Stream<T> stream(@NotNull Optional<T> opt) {
-    return opt.isPresent() ? Stream.of(opt.get()) : Stream.empty();
+    return opt.stream();
   }
 
   @NotNull
-  public <T, R> Function<T, Stream<R>> stream(@NotNull Function<T, Optional<R>> func) {
-    return func.andThen(MoreOptional::stream);
+  public static <T, R> Function<T, Stream<R>> stream(@NotNull Function<T, Optional<R>> func) {
+    return func.andThen(Optional::stream);
   }
 
   /**
@@ -65,7 +66,7 @@ public final class MoreOptional {
   public static <T> Optional<T> findFirstPresent(@NotNull Stream<Supplier<Optional<T>>> suppliers,
       Predicate<T> filter) {
     return suppliers.map(Supplier::get)
-        .flatMap(MoreOptional::stream)
+        .flatMap(Optional::stream)
         .filter(filter)
         .findFirst();
   }

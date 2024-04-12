@@ -77,4 +77,58 @@ public class MoreRangeTest {
     assertEquals(Range.all(), MoreRange.mapRange(range, i -> null));
   }
 
+  @Test
+  public void test_builder() {
+    assertEquals(Range.closed(lower, upper),
+        new MoreRange.Builder<Integer>()
+            .lower(lower).upper(upper)
+            .build());
+  }
+
+  @Test
+  public void test_builder_empty() {
+    assertEquals(Range.all(), new MoreRange.Builder<Integer>().build());
+  }
+
+  @Test
+  public void test_builder_openClosed() {
+    assertEquals(Range.openClosed(lower, upper),
+        new MoreRange.Builder<Integer>()
+            .lower(lower).lowerType(BoundType.OPEN)
+            .upper(upper)
+            .build());
+  }
+
+  @Test
+  public void test_builder_closedOpen() {
+    assertEquals(Range.closedOpen(lower, upper),
+        new MoreRange.Builder<Integer>()
+            .lower(lower)
+            .upper(upper).upperType(BoundType.OPEN)
+            .build());
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void test_builder_IAE() {
+    new MoreRange.Builder<Integer>()
+        .lower(upper).upper(lower)
+        .build();
+  }
+
+  @Test
+  public void test_builder_autoCorrect_lowerLast() {
+    assertEquals(Range.singleton(lower),
+        new MoreRange.Builder<Integer>().autoCorrect()
+            .lower(upper).upper(lower)
+            .build());
+  }
+
+  @Test
+  public void test_builder_autoCorrect_upperLast() {
+    assertEquals(Range.singleton(upper),
+        new MoreRange.Builder<Integer>().autoCorrect()
+            .upper(lower).lower(upper)
+            .build());
+  }
+
 }

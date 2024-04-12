@@ -22,9 +22,6 @@ import javax.annotation.Nullable;
 import javax.validation.constraints.NotNull;
 
 import com.google.common.base.Defaults;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Streams;
 import com.google.common.primitives.Primitives;
 
@@ -70,9 +67,9 @@ public final class MoreObjectsCel {
   }
 
   /**
-   * @deprecated since 5.2, instead use {@link MoreOptional#toJavaUtil}
+   * @deprecated instead use {@link MoreOptional#toJavaUtil}
    */
-  @Deprecated
+  @Deprecated(since = "5.2", forRemoval = true)
   @NotNull
   public static <F, T> Function<F, Optional<T>> optToJavaUtil(
       @NotNull Function<F, com.google.common.base.Optional<T>> func) {
@@ -80,18 +77,18 @@ public final class MoreObjectsCel {
   }
 
   /**
-   * @deprecated since 5.2, instead use {@link MoreOptional#asNonBlank}
+   * @deprecated instead use {@link MoreOptional#asNonBlank}
    */
-  @Deprecated
+  @Deprecated(since = "5.2", forRemoval = true)
   @NotNull
   public static Optional<String> asOptNonBlank(@Nullable String str) {
     return MoreOptional.asNonBlank(str);
   }
 
   /**
-   * @deprecated since 5.2, instead use {@link MoreOptional#findFirstPresent(Supplier...)}
+   * @deprecated instead use {@link MoreOptional#findFirstPresent(Supplier...)}
    */
-  @Deprecated
+  @Deprecated(since = "5.2", forRemoval = true)
   @NotNull
   @SafeVarargs
   public static <T> Optional<T> findFirstPresent(@NotNull Supplier<Optional<T>>... suppliers) {
@@ -151,9 +148,9 @@ public final class MoreObjectsCel {
     }
     Object ret = null;
     if (List.class.isAssignableFrom(type)) {
-      ret = (mutable ? new ArrayList<>() : ImmutableList.of());
+      ret = (mutable ? new ArrayList<>() : List.of());
     } else if (Set.class.isAssignableFrom(type)) {
-      ret = (mutable ? new LinkedHashSet<>() : ImmutableSet.of());
+      ret = (mutable ? new LinkedHashSet<>() : Set.of());
     } else if (Queue.class.isAssignableFrom(type)) {
       ret = new LinkedList<>();
     } else if (Iterable.class.isAssignableFrom(type)) {
@@ -161,7 +158,7 @@ public final class MoreObjectsCel {
     } else if (Properties.class.isAssignableFrom(type)) {
       ret = new Properties();
     } else if (Map.class.isAssignableFrom(type)) {
-      ret = (mutable ? new LinkedHashMap<>() : ImmutableMap.of());
+      ret = (mutable ? new LinkedHashMap<>() : Map.of());
     } else if (Stream.class.isAssignableFrom(type)) {
       ret = Stream.empty();
     } else if (Optional.class.isAssignableFrom(type)) {
@@ -185,9 +182,9 @@ public final class MoreObjectsCel {
     } else if (value instanceof Iterator) {
       return Streams.stream((Iterator<T>) value);
     } else if (value instanceof Optional) {
-      return MoreOptional.stream((Optional<T>) value);
+      return ((Optional<T>) value).stream();
     } else if (value instanceof com.google.common.base.Optional) {
-      return MoreOptional.stream(((com.google.common.base.Optional<T>) value).toJavaUtil());
+      return ((com.google.common.base.Optional<T>) value).toJavaUtil().stream();
     } else if (value != null) {
       return Stream.of((T) value);
     } else {
@@ -195,7 +192,12 @@ public final class MoreObjectsCel {
     }
   }
 
-  private static final List<Class<?>> UTIL_CLASSES = ImmutableList.of(Stream.class,
+  @NotNull
+  public <F, T> Function<F, Stream<T>> stream(@NotNull Function<F, ? extends T> func) {
+    return func.andThen(MoreObjectsCel::<T>stream);
+  }
+
+  private static final List<Class<?>> UTIL_CLASSES = List.of(Stream.class,
       List.class, Set.class, Queue.class, Collection.class, Iterable.class,
       Properties.class, Map.class,
       Spliterator.class, Iterator.class);
