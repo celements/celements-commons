@@ -3,6 +3,7 @@ package com.celements.common.range;
 import static com.google.common.base.MoreObjects.*;
 import static com.google.common.base.Preconditions.*;
 
+import java.util.Optional;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
@@ -77,13 +78,19 @@ public final class MoreRange {
     return new Builder<T>(range).upper(null).build();
   }
 
+  /**
+   * Builder for {@link Range}. The range is unbounded by default, i.e. lower and upper are null,
+   * corresponding to {@link Range#all()}. The default type for both bounds is
+   * {@link BoundType#CLOSED}.
+   */
   public static class Builder<T extends Comparable<?>> {
 
     private boolean autoCorrect = false;
+    private BoundType defaultType = BoundType.CLOSED;
     private T lower;
-    private BoundType lowerType = BoundType.CLOSED;
+    private BoundType lowerType;
     private T upper;
-    private BoundType upperType = BoundType.CLOSED;
+    private BoundType upperType;
 
     public Builder() {}
 
@@ -102,16 +109,34 @@ public final class MoreRange {
       }
     }
 
-    public Builder<T> autoCorrect() {
+    /**
+     * Automatically correct the range if it becomes invalid, enforcing lower <= upper. The default
+     * is false, leading instead to fast failure on {@link #build()} if the range is invalid.
+     *
+     * @see #isValid()
+     */
+    public @NotNull Builder<T> autoCorrect() {
       this.autoCorrect = true;
       return this;
     }
 
-    public T getLower() {
-      return lower;
+    /**
+     * Set the default type for both bounds if not explicitly set by {@link #lowerType} or
+     * {@link #upperType}. The fallback is {@link BoundType#CLOSED}.
+     */
+    public @NotNull Builder<T> defaultType(@NotNull BoundType defaultType) {
+      this.defaultType = checkNotNull(defaultType);
+      return this;
     }
 
-    public Builder<T> lower(@Nullable T lower) {
+    public @NotNull Optional<T> getLower() {
+      return Optional.ofNullable(lower);
+    }
+
+    /**
+     * Set the lower bound of the range, null means no lower bound.
+     */
+    public @NotNull Builder<T> lower(@Nullable T lower) {
       this.lower = lower;
       if (autoCorrect && !isValid()) {
         upper(lower); // upper < lower
@@ -119,20 +144,26 @@ public final class MoreRange {
       return this;
     }
 
-    public BoundType getLowerType() {
-      return lowerType;
+    public @NotNull BoundType getLowerType() {
+      return firstNonNull(lowerType, defaultType);
     }
 
-    public Builder<T> lowerType(@NotNull BoundType lowerType) {
+    /**
+     * Set the type of the lower bound.
+     */
+    public @NotNull Builder<T> lowerType(@NotNull BoundType lowerType) {
       this.lowerType = checkNotNull(lowerType);
       return this;
     }
 
-    public T getUpper() {
-      return upper;
+    public @NotNull Optional<T> getUpper() {
+      return Optional.ofNullable(upper);
     }
 
-    public Builder<T> upper(@Nullable T upper) {
+    /*
+     * Set the upper bound of the range, null means no upper bound.
+     */
+    public @NotNull Builder<T> upper(@Nullable T upper) {
       this.upper = upper;
       if (autoCorrect && !isValid()) {
         lower(upper); // lower > upper
@@ -140,27 +171,33 @@ public final class MoreRange {
       return this;
     }
 
-    public BoundType getUpperType() {
-      return upperType;
+    public @NotNull BoundType getUpperType() {
+      return firstNonNull(upperType, defaultType);
     }
 
-    public Builder<T> upperType(@NotNull BoundType upperType) {
+    /**
+     * Set the type of the upper bound.
+     */
+    public @NotNull Builder<T> upperType(@NotNull BoundType upperType) {
       this.upperType = checkNotNull(upperType);
       return this;
     }
 
+    /**
+     * Check if the range is valid, i.e. lower <= upper if both are set
+     */
     @SuppressWarnings("unchecked")
     public boolean isValid() {
       return (lower == null) || (upper == null) || (((Comparable<T>) lower).compareTo(upper) <= 0);
     }
 
-    public Range<T> build() {
+    public @NotNull Range<T> build() {
       if ((lower != null) && (upper != null)) {
-        return Range.range(lower, lowerType, upper, upperType);
+        return Range.range(lower, getLowerType(), upper, getUpperType());
       } else if (lower != null) {
-        return Range.downTo(lower, lowerType);
+        return Range.downTo(lower, getLowerType());
       } else if (upper != null) {
-        return Range.upTo(upper, upperType);
+        return Range.upTo(upper, getUpperType());
       } else {
         return Range.all();
       }
